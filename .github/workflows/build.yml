@@ -1,0 +1,36 @@
+name: Buildroot_RPi2B_Cast
+on: [push, workflow_dispatch] # Berjalan saat push atau dijalankan manual
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libncurses5-dev rsync bc wget \
+          cpio unzip git perl python3 python3-pip
+
+      - name: Configure for Raspberry Pi 2
+        run: make raspberrypi2_defconfig
+
+      # Opsi: Menambahkan paket GStreamer & Python via perintah sed atau merge config
+      - name: Customize Config
+        run: |
+          echo "BR2_PACKAGE_GSTREAMER1=y" >> .config
+          echo "BR2_PACKAGE_GST1_PLUGINS_BASE_ALSA=y" >> .config
+          echo "BR2_PACKAGE_GST1_PLUGINS_BAD_FBDEV=y" >> .config
+          echo "BR2_PACKAGE_PYTHON3=y" >> .config
+          make olddefconfig
+
+      - name: Build System (Bisa memakan waktu 1-2 jam)
+        run: make
+
+      - name: Upload SD Card Image
+        uses: actions/upload-artifact@v3
+        with:
+          name: buildroot-rpi2-image
+          path: output/images/sdcard.img
