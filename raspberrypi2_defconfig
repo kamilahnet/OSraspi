@@ -1,0 +1,63 @@
+name: RPi2 School Bell Build
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install Build Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential wget cpio python3 unzip rsync bc libncurses-dev git
+
+    - name: Clone Buildroot
+      run: git clone https://github.com/buildroot/buildroot.git --depth=1
+
+    - name: Configure Buildroot
+      run: |
+        cd buildroot
+        make raspberrypi2_defconfig
+
+        # --- SISTEM & NETWORK ---
+        echo "BR2_PACKAGE_BUSYBOX=y" >> .config
+        echo "BR2_PACKAGE_IFUPDOWN_SCRIPTS=y" >> .config # DHCP Client otomatis
+        echo "BR2_PACKAGE_DROPBEAR=y" >> .config        # SSH Server
+        echo "BR2_PACKAGE_OPENSSH_SFTP_SERVER=y" >> .config # Supaya WinSCP Lancar
+
+        # --- AUDIO & VIDEO (GSTREAMER) ---
+        echo "BR2_PACKAGE_ALSA_UTILS=y" >> .config
+        echo "BR2_PACKAGE_GSTREAMER1=y" >> .config
+        echo "BR2_PACKAGE_GST1_PLUGINS_BASE=y" >> .config
+        echo "BR2_PACKAGE_GST1_PLUGINS_GOOD=y" >> .config
+        echo "BR2_PACKAGE_GST1_PLUGINS_BAD=y" >> .config
+
+        # --- PYTHON & PYGAME ---
+        echo "BR2_PACKAGE_PYTHON3=y" >> .config
+        echo "BR2_PACKAGE_PYTHON_PYGAME=y" >> .config
+        echo "BR2_PACKAGE_SDL2=y" >> .config             # Backend untuk Pygame/HDMI
+        echo "BR2_PACKAGE_SDL2_IMAGE=y" >> .config
+        echo "BR2_PACKAGE_SDL2_MIXER=y" >> .config
+
+        # --- SYSTEM CONFIG ---
+        echo "BR2_TARGET_GENERIC_ROOT_PASSWD=\"admin\"" >> .config
+        echo "BR2_TARGET_GENERIC_GETTY_PORT=\"tty1\"" >> .config
+
+        make olddefconfig
+
+    - name: Build System
+      run: |
+        cd buildroot
+        make -j$(nproc)
+
+    - name: Upload SD Card Image
+      uses: actions/upload-artifact@v4
+      with:
+        name: school-bell-pi2
+        path: buildroot/output/images/sdcard.img
