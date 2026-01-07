@@ -24,3 +24,37 @@ You can also find us on #buildroot on OFTC IRC.
 
 If you would like to contribute patches, please read
 https://buildroot.org/manual.html#submitting-patches
+
+pada PATCH 12
+tambahan
+Untuk menambahkan dukungan LAN (Ethernet) dengan pengambilan IP otomatis melalui DHCP, kita perlu menambahkan beberapa konfigurasi pada file YAML Anda.
+
+Dalam Buildroot, minimal kita memerlukan paket busybox (yang biasanya sudah menyediakan klien DHCP bernama udhcpc) atau dhcpcd, serta memastikan konfigurasi antarmuka jaringan diaktifkan.
+
+Perubahan pada File YAML
+Silakan tambahkan baris-baris berikut di bawah bagian Customize Config:
+
+YAML
+
+          # Mengaktifkan Networking & DHCP
+          echo "BR2_PACKAGE_IFUPDOWN=y" >> .config
+          echo "BR2_PACKAGE_BUSYBOX_SHOW_OTHERS=y" >> .config
+          echo "BR2_PACKAGE_NET-TOOLS=y" >> .config
+          
+          # Pengaturan agar otomatis mencari IP di eth0 (LAN)
+          # Opsional: Jika ingin menggunakan dhcpcd (lebih modern)
+          echo "BR2_PACKAGE_DHCPCD=y" >> .config
+Penjelasan Paket yang Ditambahkan:
+BR2_PACKAGE_IFUPDOWN: Memberikan perintah ifup dan ifdown. Ini sangat penting agar sistem bisa menjalankan skrip /etc/network/interfaces saat booting.
+
+BR2_PACKAGE_NET-TOOLS: Menambahkan perintah standar jaringan seperti ifconfig, route, dan arp.
+
+BR2_PACKAGE_DHCPCD: Ini adalah DHCP Client daemon. Meskipun Busybox punya udhcpc, dhcpcd lebih handal dalam menangani koneksi LAN yang sering putus-nyambung (hotplug).
+
+Langkah Penting Tambahan (Post-Build Script)
+Agar LAN langsung aktif saat Raspberry Pi menyala, Anda perlu memastikan file /etc/network/interfaces di dalam sistem target berisi perintah berikut:
+
+Plaintext
+
+auto eth0
+iface eth0 inet dhcp
