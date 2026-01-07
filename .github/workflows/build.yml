@@ -23,6 +23,10 @@ jobs:
           echo "BR2_PACKAGE_IFUPDOWN=y" >> .config
           echo "BR2_PACKAGE_DHCPCD=y" >> .config
           echo "BR2_PACKAGE_NET_TOOLS=y" >> .config
+          # --- Tambahan SSH & WinSCP (SFTP) Support ---
+          echo "BR2_PACKAGE_OPENSSH=y" >> .config
+          echo "BR2_PACKAGE_OPENSSH_SERVER=y" >> .config
+          echo "BR2_PACKAGE_OPENSSH_SFTP_SERVER=y" >> .config
           # Mengaktifkan driver audio & Python
           echo "BR2_PACKAGE_PYTHON3=y" >> .config
           echo "BR2_PACKAGE_ALSA_UTILS=y" >> .config
