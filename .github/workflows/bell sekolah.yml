@@ -13,60 +13,61 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential libncurses5-dev rsync bc wget \
           cpio unzip git perl python3 python3-pip
-      - name: Configure for Raspberry Pi 2
-        run: make raspberrypi2_defconfig
 
-      - name: Customize Config (Full Suite for School Bell)
+      - name: Configure and Build
         run: |
-          # Ambil konfigurasi default terlebih dahulu
+          # 1. Reset ke konfigurasi default Raspberry Pi 2
           make raspberrypi2_defconfig
 
-          # --- SYSTEM & SECURITY ---
-          echo "BR2_TARGET_GENERIC_GETTY_PORT=\"tty1\"" >> .config
-          echo "BR2_TARGET_GENERIC_ROOT_PASSWD=\"root\"" >> .config
-          echo "BR2_PACKAGE_IFUPDOWN_SCRIPTS=y" >> .config
-          echo "BR2_SYSTEM_DHCP=\"eth0\"" >> .config
+          # 2. Tambahkan kustomisasi secara hati-hati
+          # Gunakan sed atau echo dengan format yang benar
+          cat >> .config <<EOF
+          # SYSTEM
+          BR2_TARGET_GENERIC_ROOT_PASSWD="root"
+          BR2_SYSTEM_DHCP="eth0"
+          BR2_PACKAGE_IFUPDOWN_SCRIPTS=y
           
-          # --- SSH & REMOTE MANAGEMENT ---
-          echo "BR2_PACKAGE_DROPBEAR=y" >> .config
-          echo "BR2_PACKAGE_DROPBEAR_DISABLE_REVERSEDNS=y" >> .config
-          echo "BR2_PACKAGE_OPENSSH_SFTP_SERVER=y" >> .config
+          # SSH & SFTP
+          BR2_PACKAGE_DROPBEAR=y
+          BR2_PACKAGE_DROPBEAR_DISABLE_REVERSEDNS=y
+          BR2_PACKAGE_OPENSSH_SFTP_SERVER=y
 
-          # --- TIME SCHEDULING ---
-          echo "BR2_PACKAGE_CRONIE=y" >> .config
-          echo "BR2_PACKAGE_NTP=y" >> .config
-          echo "BR2_PACKAGE_NTP_NTPDATE=y" >> .config
+          # TIME
+          BR2_PACKAGE_CRONIE=y
+          BR2_PACKAGE_NTP=y
+          BR2_PACKAGE_NTP_NTPDATE=y
 
-          # --- PYTHON 3 & LIBRARIES ---
-          echo "BR2_PACKAGE_PYTHON3=y" >> .config
-          echo "BR2_PACKAGE_PYTHON_PIP=y" >> .config
-          echo "BR2_PACKAGE_PYTHON_PYGAME=y" >> .config
-          echo "BR2_PACKAGE_PYTHON_PYGAME_IMAGE=y" >> .config
-          echo "BR2_PACKAGE_PYTHON_PYGAME_FONT=y" >> .config
-          echo "BR2_PACKAGE_PYTHON_PYGAME_MIXER=y" >> .config
+          # MULTIMEDIA & AUDIO
+          BR2_PACKAGE_ALSA_UTILS=y
+          BR2_PACKAGE_ALSA_UTILS_APLAY=y
+          BR2_PACKAGE_GSTREAMER1=y
+          BR2_PACKAGE_GST1_PLUGINS_BASE=y
+          BR2_PACKAGE_GST1_PLUGINS_BASE_ALSA=y
+          BR2_PACKAGE_GST1_PLUGINS_GOOD=y
+          BR2_PACKAGE_GST1_PLUGINS_GOOD_RTP=y
+          BR2_PACKAGE_GST1_PLUGINS_GOOD_UDP=y
+          BR2_PACKAGE_GST1_PLUGINS_BAD=y
+          BR2_PACKAGE_GST1_PLUGINS_BAD_FBDEV=y
 
-          # --- AUDIO & GSTREAMER ---
-          echo "BR2_PACKAGE_ALSA_UTILS=y" >> .config
-          echo "BR2_PACKAGE_ALSA_UTILS_APLAY=y" >> .config
-          echo "BR2_PACKAGE_GSTREAMER1=y" >> .config
-          echo "BR2_PACKAGE_GST1_PLUGINS_BASE=y" >> .config
-          echo "BR2_PACKAGE_GST1_PLUGINS_BASE_ALSA=y" >> .config
-          echo "BR2_PACKAGE_GST1_PLUGINS_GOOD=y" >> .config
-          echo "BR2_PACKAGE_GST1_PLUGINS_GOOD_RTP=y" >> .config
-          echo "BR2_PACKAGE_GST1_PLUGINS_GOOD_UDP=y" >> .config
-          echo "BR2_PACKAGE_GST1_PLUGINS_BAD=y" >> .config
-          echo "BR2_PACKAGE_GST1_PLUGINS_BAD_FBDEV=y" >> .config
+          # PYTHON & PYGAME
+          BR2_PACKAGE_PYTHON3=y
+          BR2_PACKAGE_PYTHON_PIP=y
+          BR2_PACKAGE_PYTHON_PYGAME=y
+          BR2_PACKAGE_PYTHON_PYGAME_IMAGE=y
+          BR2_PACKAGE_PYTHON_PYGAME_FONT=y
+          BR2_PACKAGE_PYTHON_PYGAME_MIXER=y
 
-          # --- GUI & DISPLAY ---
-          echo "BR2_PACKAGE_NETSURF=y" >> .config
-          echo "BR2_PACKAGE_DEJAVU=y" >> .config
-          echo "BR2_PACKAGE_CANVAS_FONTS=y" >> .config
+          # GUI
+          BR2_PACKAGE_NETSURF=y
+          BR2_PACKAGE_DEJAVU=y
+          BR2_PACKAGE_CANVAS_FONTS=y
+          EOF
 
-          # --- FIX LEGACY CONFIG ERROR ---
-          # Perintah ini akan membuang opsi yang tidak lagi didukung secara otomatis
+          # 3. Sinkronisasi ulang konfigurasi untuk membersihkan legacy secara paksa
           make olddefconfig
-      - name: Build System
-        run: make
+
+          # 4. Mulai Build
+          make
 
       - name: Upload SD Card Image
         uses: actions/upload-artifact@v4
