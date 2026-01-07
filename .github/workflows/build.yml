@@ -19,6 +19,10 @@ jobs:
 
       - name: Customize Config (GStreamer & Audio)
         run: |
+          # --- Tambahan untuk Jaringan LAN DHCP ---
+          echo "BR2_PACKAGE_IFUPDOWN=y" >> .config
+          echo "BR2_PACKAGE_DHCPCD=y" >> .config
+          echo "BR2_PACKAGE_NET_TOOLS=y" >> .config
           # Mengaktifkan driver audio & Python
           echo "BR2_PACKAGE_PYTHON3=y" >> .config
           echo "BR2_PACKAGE_ALSA_UTILS=y" >> .config
