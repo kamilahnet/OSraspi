@@ -13,29 +13,31 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential libncurses5-dev rsync bc wget \
           cpio unzip git perl python3 python3-pip
-
       - name: Configure for Raspberry Pi 2
         run: make raspberrypi2_defconfig
 
       - name: Customize Config (Full Suite for School Bell)
         run: |
+          # Ambil konfigurasi default terlebih dahulu
+          make raspberrypi2_defconfig
+
           # --- SYSTEM & SECURITY ---
           echo "BR2_TARGET_GENERIC_GETTY_PORT=\"tty1\"" >> .config
           echo "BR2_TARGET_GENERIC_ROOT_PASSWD=\"root\"" >> .config
           echo "BR2_PACKAGE_IFUPDOWN_SCRIPTS=y" >> .config
           echo "BR2_SYSTEM_DHCP=\"eth0\"" >> .config
           
-          # --- SSH & REMOTE MANAGEMENT (WinSCP) ---
+          # --- SSH & REMOTE MANAGEMENT ---
           echo "BR2_PACKAGE_DROPBEAR=y" >> .config
           echo "BR2_PACKAGE_DROPBEAR_DISABLE_REVERSEDNS=y" >> .config
           echo "BR2_PACKAGE_OPENSSH_SFTP_SERVER=y" >> .config
 
-          # --- TIME SCHEDULING (Penting untuk Bel) ---
+          # --- TIME SCHEDULING ---
           echo "BR2_PACKAGE_CRONIE=y" >> .config
           echo "BR2_PACKAGE_NTP=y" >> .config
           echo "BR2_PACKAGE_NTP_NTPDATE=y" >> .config
 
-          # --- PYTHON 3 & LIBRARIES (Pygame) ---
+          # --- PYTHON 3 & LIBRARIES ---
           echo "BR2_PACKAGE_PYTHON3=y" >> .config
           echo "BR2_PACKAGE_PYTHON_PIP=y" >> .config
           echo "BR2_PACKAGE_PYTHON_PYGAME=y" >> .config
@@ -43,7 +45,7 @@ jobs:
           echo "BR2_PACKAGE_PYTHON_PYGAME_FONT=y" >> .config
           echo "BR2_PACKAGE_PYTHON_PYGAME_MIXER=y" >> .config
 
-          # --- AUDIO & GStreamer (ALSA & Multimedia) ---
+          # --- AUDIO & GSTREAMER ---
           echo "BR2_PACKAGE_ALSA_UTILS=y" >> .config
           echo "BR2_PACKAGE_ALSA_UTILS_APLAY=y" >> .config
           echo "BR2_PACKAGE_GSTREAMER1=y" >> .config
@@ -55,14 +57,14 @@ jobs:
           echo "BR2_PACKAGE_GST1_PLUGINS_BAD=y" >> .config
           echo "BR2_PACKAGE_GST1_PLUGINS_BAD_FBDEV=y" >> .config
 
-          # --- GUI & DISPLAY (Netsurf & Fonts) ---
+          # --- GUI & DISPLAY ---
           echo "BR2_PACKAGE_NETSURF=y" >> .config
           echo "BR2_PACKAGE_DEJAVU=y" >> .config
           echo "BR2_PACKAGE_CANVAS_FONTS=y" >> .config
 
-          # --- Terapkan Konfigurasi ---
+          # --- FIX LEGACY CONFIG ERROR ---
+          # Perintah ini akan membuang opsi yang tidak lagi didukung secara otomatis
           make olddefconfig
-
       - name: Build System
         run: make
 
