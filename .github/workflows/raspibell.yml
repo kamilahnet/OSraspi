@@ -1,0 +1,75 @@
+name: Buildroot_RPi2B_SchoolBell
+
+on: 
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Bersihkan Ruang Disk
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf /usr/lib/jvm
+
+      - name: Instal Dependensi
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libncurses5-dev rsync bc wget \
+          cpio unzip git perl python3 python3-pip libssl-dev file
+
+      - name: Persiapan Buildroot
+        run: |
+          # Ambil source Buildroot jika belum ada di repo
+          if [ ! -f Makefile ]; then
+            git clone --depth 1 https://github.com/buildroot/buildroot.git .
+          fi
+
+      - name: Konfigurasi dan Kustomisasi
+        run: |
+          make raspberrypi2_defconfig
+          
+          # Menambahkan semua konfigurasi sekaligus
+          cat >> .config <<EOF
+          BR2_TARGET_GENERIC_GETTY_PORT="tty1"
+          BR2_TARGET_GENERIC_ROOT_PASSWD="root"
+          BR2_PACKAGE_IFUPDOWN_SCRIPTS=y
+          BR2_SYSTEM_DHCP="eth0"
+          BR2_PACKAGE_DROPBEAR=y
+          BR2_PACKAGE_DROPBEAR_DISABLE_REVERSEDNS=y
+          BR2_PACKAGE_OPENSSH_SFTP_SERVER=y
+          BR2_PACKAGE_CRONIE=y
+          BR2_PACKAGE_NTP=y
+          BR2_PACKAGE_NTP_NTPDATE=y
+          BR2_PACKAGE_PYTHON3=y
+          BR2_PACKAGE_PYTHON_PIP=y
+          BR2_PACKAGE_PYTHON_PYGAME=y
+          BR2_PACKAGE_PYTHON_PYGAME_MIXER=y
+          BR2_PACKAGE_ALSA_UTILS=y
+          BR2_PACKAGE_ALSA_UTILS_APLAY=y
+          BR2_PACKAGE_GSTREAMER1=y
+          BR2_PACKAGE_GST1_PLUGINS_BASE=y
+          BR2_PACKAGE_GST1_PLUGINS_BASE_ALSA=y
+          BR2_PACKAGE_GST1_PLUGINS_GOOD=y
+          BR2_PACKAGE_GST1_PLUGINS_BAD=y
+          BR2_PACKAGE_NETSURF=y
+          BR2_PACKAGE_DEJAVU=y
+          EOF
+          
+          make olddefconfig
+
+      - name: Proses Build
+        run: make
+
+      - name: Upload Hasil Gambar SD Card
+        uses: actions/upload-artifact@v4
+        with:
+          name: buildroot-rpi2-bell-image
+          path: output/images/sdcard.img
