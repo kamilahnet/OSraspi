@@ -1,0 +1,88 @@
+name: Buildroot_RPi2B_Cast_Full
+on: [push, workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libncurses5-dev rsync bc wget \
+          cpio unzip git perl python3 python3-pip
+
+      - name: Configure for Raspberry Pi 2
+        run: make raspberrypi2_defconfig
+
+      - name: Customize Config (X11, GStreamer, & GPU)
+        run: |
+          # --- Sistem Dasar & Networking ---
+          echo "BR2_PACKAGE_DROPBEAR=y" >> .config
+          echo "BR2_PACKAGE_IFUPDOWN=y" >> .config
+          echo "BR2_PACKAGE_DHCPCD=y" >> .config
+          
+          # --- Hardware Acceleration (PENTING untuk Cast) ---
+          echo "BR2_PACKAGE_RPI_USERLAND=y" >> .config
+          echo "BR2_PACKAGE_RPI_FIRMWARE=y" >> .config
+          echo "BR2_PACKAGE_RPI_FIRMWARE_VARIANT_PI2=y" >> .config
+          
+          # --- GStreamer & Codec (Omx untuk HW Decode) ---
+          echo "BR2_PACKAGE_GSTREAMER1=y" >> .config
+          echo "BR2_PACKAGE_GST1_PLUGINS_BASE=y" >> .config
+          echo "BR2_PACKAGE_GST1_PLUGINS_BASE_ALSA=y" >> .config
+          echo "BR2_PACKAGE_GST1_PLUGINS_GOOD=y" >> .config
+          echo "BR2_PACKAGE_GST1_PLUGINS_GOOD_RTP=y" >> .config
+          echo "BR2_PACKAGE_GST1_PLUGINS_GOOD_UDP=y" >> .config
+          echo "BR2_PACKAGE_GST1_PLUGINS_BAD=y" >> .config
+          echo "BR2_PACKAGE_GST1_PLUGINS_BAD_FBDEV=y" >> .config
+          echo "BR2_PACKAGE_GST1_OMX=y" >> .config
+          
+          # --- Opsional: X11 (Jika Anda tetap ingin mencobanya) ---
+          echo "BR2_PACKAGE_XSERVER_XORG_SERVER=y" >> .config
+          echo "BR2_PACKAGE_XSERVER_XORG_SERVER_MODULAR=y" >> .config
+          echo "BR2_PACKAGE_XF86_VIDEO_FBTURBO=y" >> .config
+          echo "BR2_PACKAGE_XF86_INPUT_EVDEV=y" >> .config
+
+          # --- Membuat Rootfs Overlay untuk Autostart ---
+          mkdir -p board/raspberrypi2/rootfs-overlay/etc/init.d/
+          mkdir -p board/raspberrypi2/rootfs-overlay/etc/network/
+
+          # Script Network DHCP Otomatis
+          echo -e "auto lo\niface lo inet loopback\n\nauto eth0\niface eth0 inet dhcp" > board/raspberrypi2/rootfs-overlay/etc/network/interfaces
+
+          # Script Autostart Cast Receiver (S99cast)
+          cat << 'EOF' > board/raspberrypi2/rootfs-overlay/etc/init.d/S99cast
+          #!/bin/sh
+          case "$1" in
+            start)
+              echo "Starting Cast Receiver..."
+              # Menjalankan GStreamer di background menggunakan FBDEV (tanpa perlu X11)
+              gst-launch-1.0 udpsrc port=5000 ! application/x-rtp,payload=96 ! rtph264depay ! h264parse ! omxh264dec ! fbdevsink &
+              ;;
+            stop)
+              killall gst-launch-1.0
+              ;;
+            *)
+              echo "Usage: $0 {start|stop}"
+              exit 1
+          esac
+          exit 0
+          EOF
+          chmod +x board/raspberrypi2/rootfs-overlay/etc/init.d/S99cast
+
+          echo "BR2_ROOTFS_OVERLAY=\"board/raspberrypi2/rootfs-overlay\"" >> .config
+          
+          # Update config sesuai dependency
+          make olddefconfig
+
+      - name: Build System
+        run: make
+
+      - name: Upload SD Card Image
+        uses: actions/upload-artifact@v4
+        with:
+          name: buildroot-rpi2-cast-image
+          path: output/images/sdcard.img
