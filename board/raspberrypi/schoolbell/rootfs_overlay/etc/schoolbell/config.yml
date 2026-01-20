@@ -1,0 +1,24 @@
+ettings:
+  audio_device: ""
+  audio_volume: 90
+  log_file: "/var/log/schoolbell.log"
+
+schedule:
+  - name: "Masuk Pagi"
+    time: "07:00"
+    days: ["mon", "tue", "wed", "thu", "fri"]
+    audio: "/usr/share/schoolbell/bell.wav"
+    repeat: 1
+    interval_seconds: 2
+  - name: "Istirahat"
+    time: "10:00"
+    days: ["mon", "tue", "wed", "thu", "fri"]
+    audio: "/usr/share/schoolbell/bell.wav"
+    repeat: 2
+    interval_seconds: 3
+  - name: "Pulang"
+    time: "15:00"
+    days: ["mon", "tue", "wed", "thu", "fri"]
+    audio: "/usr/share/schoolbell/bell.wav"
+    repeat: 3
+    interval_seconds: 3
